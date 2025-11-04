@@ -10,11 +10,21 @@
   "license": "MIT",
   "author": "Henrik Collin <henrik.collin@cinia.fi>",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "vitest"
+    "test": "vitest run src",
+    "test:dist": "tsc -b && vite build && vitest run src disttest"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",

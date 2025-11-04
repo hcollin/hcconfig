@@ -5,8 +5,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: 'src/index.ts',
-      name: 'MyLibrary',
-      fileName: (format) => `my-library.${format}.js`,
+      name: 'hconfig',
+      fileName: (format) => `index.${format}.js`,
       formats: ['es', 'cjs'],
     },
     rollupOptions: {
