@@ -1,0 +1,26 @@
+{
+  "name": "hcconfig",
+  "version": "0.0.1",
+  "description": "A configuration library",
+  "keywords": [
+    "typescript",
+    "configuration",
+    "cinia"
+  ],
+  "license": "MIT",
+  "author": "Henrik Collin <henrik.collin@cinia.fi>",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.6"
+  }
+}
