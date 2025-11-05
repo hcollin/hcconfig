@@ -8,5 +8,6 @@ export const ERRORCODES = {
     BACKEND_UPDATE_FAILED: "Backend update function failed to fetch new configuration.",
     CONFIGURATIONS_NOT_BUILT_YET: "Configurations have not been built yet.",
     UNKNOWN_CONFIG_LEVEL: "The specified configuration level is unknown.",
+    INVALID_CONFIG_TYPE: "The configuration value is of an invalid type. Expected string, number, boolean, or null.",
 
 }
