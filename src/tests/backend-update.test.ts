@@ -72,7 +72,7 @@ describe("Backend update process", () => {
         conf.stopBackendAutoUpdate();
     });
 
-    test.only("Backend updates must trigger until stopped", async () => {
+    test("Backend updates must trigger until stopped", async () => {
         const update: Partial<TestConfig> = { bar: 42 };
 
         const conf = new Configuration<TestConfig>(
