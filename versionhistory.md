@@ -1,4 +1,8 @@
 
+# 0.2.1
+
+ - First version of the Github Actions for building and deploying this library
+
 # 0.2.0
 
 - React useConfig and useConfigs hooks

@@ -1,10 +1,12 @@
 {
   "name": "hcconfig",
-  "version": "0.2.0",
-  "description": "A configuration library",
+  "version": "0.2.1",
+  "description": "A configuration class",
   "keywords": [
     "typescript",
     "configuration",
+    "react",
+    "hooks",
     "cinia"
   ],
   "license": "MIT",
@@ -28,7 +30,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test:dev": "vitest watch src",
-    "test:ci": "vitest run src",
+    "test:ci": "vitest run src disttest",
     "test:build": "tsc -b && vite build && vitest run src disttest",
     "test:dist": "vitest watch disttest"
   },
