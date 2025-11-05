@@ -1,88 +1,98 @@
 import { describe, expect, test, vi } from "vitest";
-import { IConfigurationObject } from "../interfaces/IConfigurationObject";
+import { IConfig } from "../interfaces/IConfigurationObject";
 import { Configuration } from "../Configuration.class";
+import { CONFIGLEVEL } from "../enums/CONFIGLEVEL";
+import { getConfigObjectInLevel } from "./test-tools";
 
 describe("Subscribe to Configuration Values", () => {
-    interface TestConfig extends IConfigurationObject {
-        settingA: string;
-        settingB: number;
+    interface TestConfig extends IConfig {
+        foo: string;
+        bar: number;
     }
 
     test("Listener is called when subscribed keys change with setValue", () => {
-        const conf = new Configuration<TestConfig>({ settingA: "defaultA", settingB: 10 });
+        const conf = new Configuration<TestConfig>({ foo: "defaultA", bar: 10 });
 
         const cb = vi.fn((changedKeys: Partial<TestConfig>) => {});
 
-        const unsubscribe = conf.subscribe(["settingA"], cb);
+        const unsubscribe = conf.subscribe(["foo"], cb);
 
-        expect(conf.getValue("settingA")).toBe("defaultA");
+        expect(conf.getValue("foo")).toBe("defaultA");
 
-        conf.setConfig("settingA", "newA"); // This should trigger the listener
+        conf.setConfig("foo", "newA"); // This should trigger the listener
 
-        expect(cb).toHaveBeenCalledWith({ settingA: "newA" });
+        expect(getConfigObjectInLevel(conf, "foo", CONFIGLEVEL.DYNAMIC)?.readonly).toBe(false);
+
+        expect(cb).toHaveBeenCalledWith({ foo: { value: "newA", level: CONFIGLEVEL.DYNAMIC, readonly: false } });
         expect(cb).toHaveBeenCalledTimes(1);
 
         unsubscribe();
     });
 
     test("Listener is not called after unsubscribe", () => {
-        const conf = new Configuration<TestConfig>({ settingA: "defaultA", settingB: 10 });
+        const conf = new Configuration<TestConfig>({ foo: "defaultA", bar: 10 });
 
         const cb = vi.fn((changedKeys: Partial<TestConfig>) => {});
 
-        const unsubscribe = conf.subscribe(["settingB"], cb);
+        const unsubscribe = conf.subscribe(["bar"], cb);
 
-        expect(conf.getValue("settingB")).toBe(10);
+        expect(conf.getValue("bar")).toBe(10);
 
-        conf.setConfig("settingB", 20); // This should trigger the listener
+        conf.setConfig("bar", 20); // This should trigger the listener
 
-        expect(cb).toHaveBeenCalledWith({ settingB: 20 });
+        expect(cb).toHaveBeenCalledWith({ bar: { value: 20, level: CONFIGLEVEL.DYNAMIC, readonly: false } });
         expect(cb).toHaveBeenCalledTimes(1);
 
         unsubscribe();
 
-        conf.setConfig("settingB", 30); // This should NOT trigger the listener
+        conf.setConfig("bar", 30); // This should NOT trigger the listener
 
         expect(cb).toHaveBeenCalledTimes(1); // Still only called once
     });
 
     test("All listeners are notified only on the key changes they are interested in", () => {
-        const conf = new Configuration<TestConfig>({ settingA: "defaultA", settingB: 10 });
+        const conf = new Configuration<TestConfig>({ foo: "defaultA", bar: 10 });
 
         const cbA = vi.fn((changedKeys: Partial<TestConfig>) => {});
         const cbB = vi.fn((changedKeys: Partial<TestConfig>) => {});
 
-        conf.subscribe(["settingA"], cbA);
-        conf.subscribe(["settingB"], cbB);
+        conf.subscribe(["foo"], cbA);
+        conf.subscribe(["bar"], cbB);
 
-        conf.setConfig("settingA", "newA");
-        conf.setConfig("settingB", 20);
+        conf.setConfig("foo", "newA");
+        conf.setConfig("bar", 20);
 
-        expect(cbA).toHaveBeenCalledWith({ settingA: "newA" });
+        expect(cbA).toHaveBeenCalledWith({ foo: { value: "newA", level: CONFIGLEVEL.DYNAMIC, readonly: false } });
         expect(cbA).toHaveBeenCalledTimes(1);
 
-        expect(cbB).toHaveBeenCalledWith({ settingB: 20 });
+        expect(cbB).toHaveBeenCalledWith({ bar: { value: 20, level: CONFIGLEVEL.DYNAMIC, readonly: false } });
         expect(cbB).toHaveBeenCalledTimes(1);
     });
 
     test("If no keys are provided the subscriber is informed of all key changes", () => {
-        const conf = new Configuration<TestConfig>({ settingA: "defaultA", settingB: 10 });
+        const conf = new Configuration<TestConfig>({ foo: "defaultA", bar: 10 });
 
         const cbA = vi.fn((changedKeys: Partial<TestConfig>) => {});
 
         const unsub = conf.subscribe([], cbA);
 
-        conf.setConfig("settingA", "newA");
+        conf.setConfig("foo", "newA");
 
-        expect(cbA).toHaveBeenCalledWith({ settingA: "newA", settingB: 10 });
+        expect(cbA).toHaveBeenCalledWith({
+            foo: { value: "newA", level: CONFIGLEVEL.DYNAMIC, readonly: false },
+            bar: { value: 10, level: CONFIGLEVEL.DEFAULT, readonly: false },
+        });
 
-        conf.setConfig("settingB", 20);
+        conf.setConfig("bar", 20);
 
-        expect(cbA).toHaveBeenCalledWith({ settingA: "newA", settingB: 20 });
+        expect(cbA).toHaveBeenCalledWith({
+            foo: { value: "newA", level: CONFIGLEVEL.DYNAMIC, readonly: false },
+            bar: { value: 20, level: CONFIGLEVEL.DYNAMIC, readonly: false },
+        });
 
         unsub();
 
-        conf.setConfig("settingA", "anotherA");
+        conf.setConfig("foo", "anotherA");
 
         expect(cbA).toHaveBeenCalledTimes(2); // No new calls after unsubscribe
     });

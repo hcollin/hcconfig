@@ -1,12 +1,13 @@
 import { describe, expect, test } from "vitest";
-import { IConfigurationObject } from "../interfaces/IConfigurationObject";
+import { IConfig } from "../interfaces/IConfigurationObject";
 import { Configuration } from "../Configuration.class";
 
-interface TestConfig extends IConfigurationObject {
+interface TestConfig extends IConfig {
     foo: string;
 }
 
 describe("Dynamic Configurations", () => {
+
     test("Setting dynamic configuration value overrides default value", () => {
         const conf = new Configuration<TestConfig>({ foo: "bar" });
 
@@ -23,6 +24,7 @@ describe("Dynamic Configurations", () => {
         expect(conf.getValue("foo")).toBe("bar");
 
         conf.setEnvironmentConfig({ foo: "envFoo" });
+
         expect(conf.getValue("foo")).toBe("envFoo");
 
         conf.setConfig("foo", "baz");

@@ -1,5 +1,11 @@
 
 
+# 0.1.0
+
+- The Configuration now handles values internally as Objects with meta data in addition to just value.
+- readOnlyKeys option
+  - Prevents changes to configuration on USER and DYNAMIC levels
+
 # 0.0.2
 
 Included some tests for distributed files.

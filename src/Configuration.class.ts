@@ -1,11 +1,14 @@
+import { read } from "fs";
 import { ConfigurationError } from "./ConfigurationError";
-import { ERRORCODES } from "./ERRORCODES";
-import { ConfigValue, IConfigurationObject } from "./interfaces/IConfigurationObject";
+import { CONFIGLEVEL } from "./enums/CONFIGLEVEL";
+import { ERRORCODES } from "./enums/ERRORCODES";
+import { ConfigValue, IConfig, IConfigurationObject } from "./interfaces/IConfigurationObject";
 
 /**
  * Options for the configuration instance
  */
-interface IConfigurationOptions<T extends IConfigurationObject> {
+interface IConfigurationOptions<T extends IConfig> {
+
     /**
      * Only create a single instance of Configuration in the application
      * Using this option will make the constructor return the same instance
@@ -15,24 +18,44 @@ interface IConfigurationOptions<T extends IConfigurationObject> {
      */
     singleton: boolean;
 
+    /**
+     * Backend update function that will be called periodically to fetch new configuration values
+     * @param currentConfig 
+     * @returns 
+     */
     backendUpdateFn?: (currentConfig: T) => Promise<Partial<T>>;
 
+    /**
+     * Interval in milliseconds for backend updates
+     */
     backendUpdateIntervalMs: number;
 
+    /**
+     * Make the backend update run immediately upon class instantiation
+     */
     backendUpdateStartImmediate: boolean;
+
+    /**
+     * Keys that should be set to read-only and cannot be overridden by user or dynamic configurations
+     */
+    readOnlyKeys: (keyof T)[];
 }
 
-interface IListener<T extends IConfigurationObject> {
+interface IListener<T extends IConfig> {
     id: string;
     keys: (keyof T)[];
     callback: (changedKeys: Partial<T>) => void;
 }
 
-export class Configuration<T extends IConfigurationObject> {
+/**
+ * Configuration class to manage application configurations on multiple levels
+ */
+export class Configuration<T extends IConfig> {
     private options: IConfigurationOptions<T> = {
         singleton: false,
         backendUpdateIntervalMs: 60000,
         backendUpdateStartImmediate: false,
+        readOnlyKeys: [],
     };
 
     private static instance: Configuration<any> | null = null;
@@ -82,8 +105,13 @@ export class Configuration<T extends IConfigurationObject> {
      */
     private backendUpdateTimeout: NodeJS.Timeout | null = null;
 
+    //=============================================================================
+    // CONSTRUCTOR
+    //=============================================================================
+
     /**
      * Constructor
+     *
      * @param defaultConfig
      * @param options
      */
@@ -94,7 +122,7 @@ export class Configuration<T extends IConfigurationObject> {
 
         this.options = { ...this.options, ...options };
 
-        this.defaultConfig = defaultConfig;
+        this.defaultConfig = this.buildDefaultValues(defaultConfig);
         this.buildConfig();
 
         if (this.options.singleton) {
@@ -118,12 +146,38 @@ export class Configuration<T extends IConfigurationObject> {
      */
     public getValue(key: keyof T): T[keyof T] | undefined {
         if (this.config) {
+            if (!this.config.hasOwnProperty(key)) {
+                return undefined;
+            }
+
+            const conf = this.config[key];
+
+            if (typeof conf === "object") {
+                const confObj = conf as IConfigurationObject;
+                return confObj.value as T[keyof T];
+            }
+
             return this.config[key];
         }
         return undefined;
     }
 
-    public static getValue<U extends IConfigurationObject>(key: keyof U): U[keyof U] | undefined {
+    /**
+     * Get a ConfigValue that can should always be a shallowcopy of the internal configuration object
+     * @param key
+     * @returns
+     */
+    public getConfig(key: keyof T): ConfigValue | undefined {
+        if (!this.config) {
+            throw new ConfigurationError(ERRORCODES.CONFIGURATIONS_NOT_BUILT_YET);
+        }
+        if (typeof this.config[key] === "object") {
+            return { ...this.config[key] };
+        }
+        return this.config[key];
+    }
+
+    public static getValue<U extends IConfig>(key: keyof U): U[keyof U] | undefined {
         if (Configuration.instance && Configuration.instance.config) {
             return Configuration.instance.getValue(key);
         }
@@ -142,7 +196,26 @@ export class Configuration<T extends IConfigurationObject> {
         throw new ConfigurationError("Configuration has not been built yet.");
     }
 
-    public static getConfigs<U extends IConfigurationObject>(): U {
+    public getConfigsForLevel(level: CONFIGLEVEL): Partial<T> {
+        if (!this.config) {
+            throw new ConfigurationError(ERRORCODES.CONFIGURATIONS_NOT_BUILT_YET);
+        }
+
+        switch (level) {
+            case CONFIGLEVEL.DEFAULT:
+                return { ...this.defaultConfig };
+            case CONFIGLEVEL.ENVIRONMENT:
+                return { ...this.environmentConfig };
+            case CONFIGLEVEL.BACKEND:
+                return { ...this.backendConfig };
+            case CONFIGLEVEL.USER:
+                return { ...this.userConfig };
+            case CONFIGLEVEL.DYNAMIC:
+                return { ...this.dynamicConfig };
+        }
+    }
+
+    public static getConfigs<U extends IConfig>(): U {
         if (Configuration.instance && Configuration.instance.config) {
             return { ...Configuration.instance.config } as U;
         }
@@ -153,7 +226,7 @@ export class Configuration<T extends IConfigurationObject> {
      * Get a singleton instance of Configuration
      * @returns
      */
-    public static getInstance<U extends IConfigurationObject>(
+    public static getInstance<U extends IConfig>(
         defaultConfig?: U,
         options?: IConfigurationOptions<U>
     ): Configuration<U> {
@@ -195,11 +268,47 @@ export class Configuration<T extends IConfigurationObject> {
      *
      * @param key
      * @param value
+     * @return boolean indicating if the value was set (false if the key is read-only)
      */
-    public setConfig(key: keyof T, value: ConfigValue) {
-        this.dynamicConfig[key] = value as T[keyof T];
+    public setConfig(key: keyof T, value: ConfigValue): boolean {
+        if (!this.config) {
+            throw new ConfigurationError(ERRORCODES.CONFIGURATIONS_NOT_BUILT_YET);
+        }
+
+        const conf = this.getConfig(key);
+
+        if (!conf) {
+            throw new ConfigurationError(ERRORCODES.UNKNOWN_CONFIG_KEY);
+        }
+
+        // If this key is read-only, do not allow setting it
+        if (this.options.readOnlyKeys.includes(key)) {
+            return false;
+        }
+
+        if (conf && typeof conf === "object") {
+            const confObj = { ...conf } as IConfigurationObject;
+            confObj.value = value as T[keyof T];
+
+            if (conf.level === CONFIGLEVEL.DEFAULT) {
+                confObj.readonly = true;
+            }
+
+            confObj.level = CONFIGLEVEL.DYNAMIC;
+
+            confObj.readonly = false;
+            this.dynamicConfig[key] = { ...confObj } as T[keyof T];
+        } else {
+            const newConfObj: IConfigurationObject = {
+                value: value as T[keyof T],
+                level: CONFIGLEVEL.DYNAMIC,
+            };
+            this.dynamicConfig[key] = { ...newConfObj } as T[keyof T];
+        }
+
         this.changedKeysBuffer.add(key);
         this.buildConfig();
+        return true;
     }
 
     /**
@@ -224,10 +333,13 @@ export class Configuration<T extends IConfigurationObject> {
     public setEnvironmentConfig(config: Partial<T>, override?: boolean) {
         if (override === true) {
             const oldEnv = { ...this.environmentConfig };
-            this.environmentConfig = config;
+            this.environmentConfig = this.buildConfigurationObjects(config, CONFIGLEVEL.ENVIRONMENT) as Partial<T>;
             this.updateChangedKeysBufferWithPartialConfig(config, oldEnv);
         } else {
-            this.environmentConfig = { ...this.environmentConfig, ...config };
+            this.environmentConfig = {
+                ...this.environmentConfig,
+                ...this.buildConfigurationObjects(config, CONFIGLEVEL.ENVIRONMENT),
+            };
             this.updateChangedKeysBufferWithPartialConfig(config);
         }
 
@@ -245,10 +357,13 @@ export class Configuration<T extends IConfigurationObject> {
     public setBackendConfig(config: Partial<T>, override?: boolean) {
         if (override === true) {
             const oldBackend = { ...this.backendConfig };
-            this.backendConfig = config;
+            this.backendConfig = this.buildConfigurationObjects(config, CONFIGLEVEL.BACKEND) as Partial<T>;
             this.updateChangedKeysBufferWithPartialConfig(config, oldBackend);
         } else {
-            this.backendConfig = { ...this.backendConfig, ...config };
+            this.backendConfig = {
+                ...this.backendConfig,
+                ...this.buildConfigurationObjects(config, CONFIGLEVEL.BACKEND),
+            };
             this.updateChangedKeysBufferWithPartialConfig(config);
         }
         this.buildConfig();
@@ -263,13 +378,21 @@ export class Configuration<T extends IConfigurationObject> {
      * @param override
      */
     public setUserConfig(config: Partial<T>, override?: boolean) {
+        // Filter out all read-only keys from the provided config
+        const filteredConfig: Partial<T> = Object.keys(config).reduce((acc, key) => {
+            if (!this.options.readOnlyKeys.includes(key as keyof T)) {
+                acc[key as keyof T] = config[key as keyof T];
+            }
+            return acc;
+        }, {} as Partial<T>);
+
         if (override === true) {
             const oldUser = { ...this.userConfig };
-            this.userConfig = config;
-            this.updateChangedKeysBufferWithPartialConfig(config, oldUser);
+            this.userConfig = this.buildConfigurationObjects(filteredConfig, CONFIGLEVEL.USER) as Partial<T>;
+            this.updateChangedKeysBufferWithPartialConfig(filteredConfig, oldUser);
         } else {
-            this.userConfig = { ...this.userConfig, ...config };
-            this.updateChangedKeysBufferWithPartialConfig(config);
+            this.userConfig = { ...this.userConfig, ...this.buildConfigurationObjects(filteredConfig, CONFIGLEVEL.USER) };
+            this.updateChangedKeysBufferWithPartialConfig(filteredConfig);
         }
         this.buildConfig();
     }
@@ -312,7 +435,87 @@ export class Configuration<T extends IConfigurationObject> {
     }
 
     //=============================================================================
-    // PRIVATE METHODS
+    // PRIVATE METHODS: Building and managing configurations
+    //=============================================================================
+
+    /**
+     * Build the full configuration object by merging all configuration sources
+     */
+    private buildConfig(): void {
+        this.config = {
+            ...this.buildDefaultValues(this.defaultConfig),
+            ...this.buildConfigurationObjects(this.environmentConfig, CONFIGLEVEL.ENVIRONMENT),
+            ...this.buildConfigurationObjects(this.backendConfig, CONFIGLEVEL.BACKEND),
+            ...this.buildConfigurationObjects(this.userConfig, CONFIGLEVEL.USER),
+            ...this.buildConfigurationObjects(this.dynamicConfig, CONFIGLEVEL.DYNAMIC),
+        } as T;
+        this.resetReadOnlyFlags();
+        this.triggerListeners();
+    }
+
+    /**
+     * Build default configuration values into IConfigurationObject entries
+     *
+     * This is a separate method as the default configuration must contain all keys of T not just Partial<T>
+     * @param conf
+     * @returns
+     */
+    private buildDefaultValues(conf: T): T {
+        const defaults: T = this.buildConfigurationObjects(conf, CONFIGLEVEL.DEFAULT) as T;
+        return defaults;
+    }
+
+    /**
+     * Convert a IConfig object with direct values into one with IConfigurationObject entries
+     * @param conf
+     * @param level
+     * @returns
+     */
+    private buildConfigurationObjects(conf: Partial<T>, level: CONFIGLEVEL): Partial<T> {
+        const builtConfig: Partial<T> = {};
+        Object.keys(conf).forEach((key) => {
+            const val = conf[key as keyof T];
+
+            if (typeof val === "object") {
+                const valObj = val as IConfigurationObject;
+                valObj.level = level;
+                builtConfig[key as keyof T] = valObj as unknown as T[keyof T];
+            } else {
+                builtConfig[key as keyof T] = {
+                    value: conf[key as keyof T],
+                    readonly: this.options.readOnlyKeys.includes(key as keyof T),
+                    level,
+                } as unknown as T[keyof T];
+            }
+        });
+        return builtConfig;
+    }
+
+    /**
+     * Mark those configs to read-only that are specified in the options
+     */
+    private resetReadOnlyFlags(): void {
+        if (!this.config) {
+            throw new ConfigurationError(ERRORCODES.CONFIGURATIONS_NOT_BUILT_YET);
+        }
+        Object.keys(this.config).forEach((key) => {
+            if (!this.config) {
+                throw new ConfigurationError(ERRORCODES.CONFIGURATIONS_NOT_BUILT_YET);
+            }
+            const val = this.config[key as keyof T];
+
+            if (this.options.readOnlyKeys.includes(key as keyof T)) {
+                if (typeof val === "object") {
+                    const valObj = val as IConfigurationObject;
+                    valObj.readonly = true;
+                    this.config[key as keyof T] = valObj as unknown as T[keyof T];
+                }
+            }
+        });
+    }
+
+    //=============================================================================
+    // PRIVATE: Backend auto-update methods
     //=============================================================================
 
     /**
@@ -330,7 +533,7 @@ export class Configuration<T extends IConfigurationObject> {
             const res = await this.options.backendUpdateFn({ ...this.config } as T);
 
             if (res && Object.keys(res).length > 0) {
-                this.setBackendConfig(res);
+                this.setBackendConfig(res, true);
             }
         } catch (error) {
             throw new ConfigurationError(ERRORCODES.BACKEND_UPDATE_FAILED, error as Error);
@@ -341,21 +544,9 @@ export class Configuration<T extends IConfigurationObject> {
         }, this.options.backendUpdateIntervalMs || 60000);
     }
 
-    /**
-     * Build the full configuration object by merging all configuration sources
-     */
-    private buildConfig(): void {
-        this.config = {
-            ...this.defaultConfig,
-            ...this.environmentConfig,
-            ...this.backendConfig,
-            ...this.userConfig,
-            ...this.dynamicConfig,
-        } as T;
-        this.backendConfig;
-
-        this.triggerListeners();
-    }
+    //=============================================================================
+    // PRIVATE: Subscriber management methods
+    //=============================================================================
 
     /**
      * Update the changed keys buffer with keys from a partial configuration object.
@@ -396,8 +587,11 @@ export class Configuration<T extends IConfigurationObject> {
             // Check if any of the listener's keys are in the changed keys buffer
             if (listener.keys.length > 0) {
                 listener.keys.forEach((key) => {
+                    if (!this.config) return;
                     if (this.changedKeysBuffer.has(key)) {
-                        relevantChanges[key] = this.config ? this.config[key] : undefined;
+                        const val = this.config[key];
+
+                        relevantChanges[key] = val;
                     }
                 });
             }
@@ -409,5 +603,48 @@ export class Configuration<T extends IConfigurationObject> {
 
         // Clear the buffer after notifying listeners
         this.changedKeysBuffer.clear();
+    }
+
+    //=============================================================================
+    // STATIC PURE HELPER METHODS FOR EXTERNAL USAGE
+    //=============================================================================
+
+    public static helperSetValue(original: ConfigValue, newValue: string | number | boolean): ConfigValue {
+        if (original && typeof original === "object") {
+            return {
+                ...original,
+                value: newValue as ConfigValue,
+            };
+        }
+
+        return newValue as ConfigValue;
+    }
+
+    public static helperGetValue(original: ConfigValue): string | number | boolean | undefined {
+        if (original && typeof original === "object") {
+            const origObj = original as IConfigurationObject;
+            if (
+                typeof origObj.value !== "string" &&
+                typeof origObj.value !== "number" &&
+                typeof origObj.value !== "boolean"
+            ) {
+                return undefined;
+            }
+            return origObj.value as string | number | boolean;
+        }
+        return original as string | number | boolean;
+    }
+
+    public static helperConvertToValueObject<T>(config: Partial<T>): Partial<T> {
+        return Object.keys(config).reduce((acc, key) => {
+            const val = config[key as keyof T];
+            if (val && typeof val === "object") {
+                const vobj = val as unknown as IConfigurationObject;
+                acc[key as keyof T] = vobj.value as T[keyof T];
+            } else {
+                acc[key as keyof T] = val;
+            }
+            return acc;
+        }, {} as Partial<T>);
     }
 }

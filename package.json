@@ -1,6 +1,6 @@
 {
   "name": "hcconfig",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "A configuration library",
   "keywords": [
     "typescript",
@@ -23,7 +23,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "vitest run src",
+    "test:dev": "vitest watch src",
+    "test:ci": "vitest run src",
     "test:dist": "tsc -b && vite build && vitest run src disttest"
   },
   "devDependencies": {
