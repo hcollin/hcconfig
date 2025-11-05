@@ -34,6 +34,10 @@
     "test:build": "tsc -b && vite build && vitest run src disttest",
     "test:dist": "vitest watch disttest"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hcollin/hcconfig.git"
+  },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.0",
@@ -47,5 +51,11 @@
     "vite": "^7.1.12",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.0.6"
-  }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ]
 }

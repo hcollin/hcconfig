@@ -1,5 +1,7 @@
 # Configuration library
 
+![Build Status](https://github.com/hcollin/hcconfig/actions/workflows/build.yml/badge.svg) ![npm version](https://img.shields.io/npm/v/hcconfig) ![License](https://img.shields.io/github/license/hcollin/hcconfig) ![Last Commit](https://img.shields.io/github/last-commit/hcollin/hcconfig)
+
 Configuration class with multiple levels of configurations.
 
 # Installing
