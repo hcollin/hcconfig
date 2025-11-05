@@ -1,4 +1,8 @@
 
+# 0.2.2
+
+ - package.json Changed the type to module and the path to types in export
+
 # 0.2.1
 
  - First version of the Github Actions for building and deploying this library
