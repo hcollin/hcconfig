@@ -8,7 +8,6 @@ import { ConfigValue, IConfig, IConfigurationObject } from "./interfaces/IConfig
  * Options for the configuration instance
  */
 interface IConfigurationOptions<T extends IConfig> {
-
     /**
      * Only create a single instance of Configuration in the application
      * Using this option will make the constructor return the same instance
@@ -20,8 +19,8 @@ interface IConfigurationOptions<T extends IConfig> {
 
     /**
      * Backend update function that will be called periodically to fetch new configuration values
-     * @param currentConfig 
-     * @returns 
+     * @param currentConfig
+     * @returns
      */
     backendUpdateFn?: (currentConfig: T) => Promise<Partial<T>>;
 
@@ -266,8 +265,8 @@ export class Configuration<T extends IConfig> {
     /**
      * Sets a dynamic configuration value
      *
-     * @param key
-     * @param value
+     * @param key The configuration key to set (needs to be string)
+     * @param value The new value must of the same type as defined in T
      * @return boolean indicating if the value was set (false if the key is read-only)
      */
     public setConfig(key: keyof T, value: ConfigValue): boolean {
@@ -391,7 +390,10 @@ export class Configuration<T extends IConfig> {
             this.userConfig = this.buildConfigurationObjects(filteredConfig, CONFIGLEVEL.USER) as Partial<T>;
             this.updateChangedKeysBufferWithPartialConfig(filteredConfig, oldUser);
         } else {
-            this.userConfig = { ...this.userConfig, ...this.buildConfigurationObjects(filteredConfig, CONFIGLEVEL.USER) };
+            this.userConfig = {
+                ...this.userConfig,
+                ...this.buildConfigurationObjects(filteredConfig, CONFIGLEVEL.USER),
+            };
             this.updateChangedKeysBufferWithPartialConfig(filteredConfig);
         }
         this.buildConfig();
@@ -432,6 +434,17 @@ export class Configuration<T extends IConfig> {
             clearTimeout(this.backendUpdateTimeout);
             this.backendUpdateTimeout = null;
         }
+    }
+
+    //=============================================================================
+    // PUBLIC METHODS: Configuration options
+    //=============================================================================
+
+    public getKeys(): (keyof T)[] {
+        if (!this.config) {
+            throw new ConfigurationError(ERRORCODES.CONFIGURATIONS_NOT_BUILT_YET);
+        }
+        return Object.keys(this.config) as (keyof T)[];
     }
 
     //=============================================================================

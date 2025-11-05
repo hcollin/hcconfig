@@ -1,17 +1,17 @@
-import { defineConfig } from 'vite';
-import dts from 'vite-plugin-dts';
+import { defineConfig } from "vite";
+import dts from "vite-plugin-dts";
 
 export default defineConfig({
-  build: {
-    lib: {
-      entry: 'src/index.ts',
-      name: 'hconfig',
-      fileName: (format) => `index.${format}.js`,
-      formats: ['es', 'cjs'],
+    build: {
+        lib: {
+            entry: "src/index.ts",
+            name: "hconfig",
+            fileName: (format) => `index.${format}.js`,
+            formats: ["es", "cjs"],
+        },
+        rollupOptions: {
+            external: ["react", "react-dom"], // add external dependencies here
+        },
     },
-    rollupOptions: {
-      external: [], // add external dependencies here
-    },
-  },
-  plugins: [dts()],
+    plugins: [dts()],
 });

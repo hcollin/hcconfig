@@ -1,4 +1,7 @@
 
+# 0.2.0
+
+- React useConfig and useConfigs hooks
 
 # 0.1.0
 
