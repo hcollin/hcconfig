@@ -5,13 +5,18 @@ export default defineConfig({
     build: {
         lib: {
             entry: "src/index.ts",
-            name: "hconfig",
+            name: "hcconfig",
             fileName: (format) => `index.${format}.js`,
-            formats: ["es", "cjs"],
+            formats: ["es", "cjs", "umd"],
         },
         rollupOptions: {
             external: ["react", "react-dom"], // add external dependencies here
         },
     },
-    plugins: [dts()],
+    plugins: [dts(
+        { 
+            tsconfigPath: "./tsconfig.json", 
+            // rollupTypes: true,
+            insertTypesEntry: true
+        })],
 });

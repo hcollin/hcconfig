@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from "vitest";
 import { CONFIGLEVEL, Configuration, ERRORCODES, useConfig, useConfigs, ConfigurationError } from "../dist/index.es.js";
-import type { IConfig } from "../dist/index.d.ts";
+import type { IConfig } from "../dist/types/index.d.ts";
 
 interface TestConfig extends IConfig {
     foo: string;

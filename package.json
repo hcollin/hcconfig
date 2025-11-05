@@ -1,6 +1,6 @@
 {
   "name": "hcconfig",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A configuration class",
   "keywords": [
     "typescript",
@@ -17,9 +17,9 @@
   "types": "dist/types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs"
+      "types": "./dist/types/index.d.ts",
+      "require": "./dist/index.cjs.js",
+      "import": "./dist/index.es.js"
     }
   },
   "peerDependencies": {

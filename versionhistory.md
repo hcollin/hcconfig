@@ -1,4 +1,8 @@
 
+# 0.2.3
+
+ - Still fixing publishing problems
+
 # 0.2.2
 
  - package.json Changed the type to module and the path to types in export
