@@ -14,6 +14,7 @@ import { CONFIGLEVEL } from "../enums/CONFIGLEVEL";
 interface TestConfig extends IConfig {
     foo: string;
     bar: number;
+    ok: boolean;
 }
 
 describe("React hooks: useConfig", () => {
@@ -21,6 +22,7 @@ describe("React hooks: useConfig", () => {
         const conf = new Configuration<TestConfig>({
             foo: "value",
             bar: 10,
+            ok: false,
         });
 
         const { result } = renderHook(() => useConfig<TestConfig>(conf, "foo"));
@@ -33,12 +35,14 @@ describe("React hooks: useConfig", () => {
         });
 
         expect(result.current[0]).toBe("newValue");
+        expect(conf.getValue("foo")).toBe("newValue");
     });
 
     test("useConfig throws error UNKNOWN_CONFIG_KEY for unknown key", () => {
         const conf = new Configuration<TestConfig>({
             foo: "value",
             bar: 10,
+            ok: false,
         });
 
         expect(() => {
@@ -50,6 +54,7 @@ describe("React hooks: useConfig", () => {
         const conf = new Configuration<TestConfig>({
             foo: "value",
             bar: 10,
+            ok: false,
         });
 
         const { result: resultFoo } = renderHook(() => useConfig<TestConfig>(conf, "foo"));
@@ -60,10 +65,56 @@ describe("React hooks: useConfig", () => {
         expect(typeof resultBar.current[0]).toBe("number");
     });
 
+    test("useConfig with value type of number" , () => {
+        const conf = new Configuration<TestConfig>({
+            foo: "value",
+            bar: 10,
+            ok: false,
+        });
+
+        const { result } = renderHook(() => useConfig<TestConfig>(conf, "bar"));
+        
+        expect(result.current[0]).toBe(10);
+
+        act(() => {
+            conf.setConfig("bar", 20);
+        });
+
+        expect(result.current[0]).toBe(20);
+        expect(conf.getValue("bar")).toBe(20);
+    });
+
+    test("useConfig with value type of boolean" , () => {
+        const conf = new Configuration<TestConfig>({
+            foo: "value",
+            bar: 10,
+            ok: false,
+        });
+
+        const { result } = renderHook(() => useConfig<TestConfig>(conf, "ok"));
+        
+        expect(result.current[0]).toBe(false);
+
+        act(() => {
+            conf.setConfig("ok", true);
+        });
+
+        expect(result.current[0]).toBe(true);
+        expect(conf.getValue("ok")).toBe(true);
+
+        act(() => {
+            result.current[2]();
+        });
+
+        expect(result.current[0]).toBe(false);
+        expect(conf.getValue("ok")).toBe(false);
+    });
+
     test("Alter the config value via the setter function", () => {
         const conf = new Configuration<TestConfig>({
             foo: "value",
             bar: 10,
+            ok: false,
         });
 
         const { result: resultFoo } = renderHook(() => useConfig<TestConfig>(conf, "foo"));
@@ -87,6 +138,7 @@ describe("React hooks: useConfig", () => {
         const conf = new Configuration<TestConfig>({
             foo: "value",
             bar: 10,
+            ok: false,
         });
 
         const { result: resultFoo } = renderHook(() => useConfig<TestConfig>(conf, "foo"));

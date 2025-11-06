@@ -5,6 +5,7 @@ import { IConfig } from "../interfaces/IConfigurationObject";
 export function useConfigs<T extends IConfig>(configInstance: Configuration<T>, keys?: (keyof T)[]): Partial<T> {
     const [values, setValues] = useState<Partial<T>>(() => {
         const targetKeys = keys && keys.length > 0 ? keys : configInstance.getKeys();
+
         return parseConfigToReactFormat(configInstance, targetKeys);
     });
 
@@ -33,7 +34,7 @@ export function useConfigs<T extends IConfig>(configInstance: Configuration<T>, 
 function parseConfigToReactFormat<T extends IConfig>(configInstance: Configuration<T>, keys: (keyof T)[]): Partial<T> {
     return keys.reduce((acc, key) => {
         const val = configInstance.getValue(key);
-        if (val) {
+        if (val !== undefined) {
             acc[key] = Configuration.helperGetValue(val) as T[typeof key];
         }
 

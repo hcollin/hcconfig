@@ -4,15 +4,14 @@ import { ConfigValue, IConfig, IConfigurationObject } from "../interfaces/IConfi
 import { ConfigurationError } from "../ConfigurationError";
 import { ERRORCODES } from "../enums/ERRORCODES";
 
-
 /**
  * Custom hook to access and manipulate a single configuration value from a Configuration instance.
- * 
+ *
  * Usage:
  * const [value, setValue, clearValue] = useConfig<IMyConfig>(configInstance, "targetKey");
- * 
+ *
  * The value is automatically updated when the configuration changes and is returned as a primitive type (string, number, boolean, or null).
- * 
+ *
  * @param configInstance Configuration class instance with the desired configuration and default values at the minimum
  * @param key The target configuration key we are interested in
  * @returns A tuple containing the current value, a setter function, and a clear function

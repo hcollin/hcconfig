@@ -1,3 +1,7 @@
+# 0.3.1
+
+ - Fixed a bug useConfigs hook that did not return values that are falsy (like false, 0 etc.) and added tests for it
+
 # 0.3.0
 
 -   useConfig now returns set and clear functions within the tuple for making changes to the target configuration
