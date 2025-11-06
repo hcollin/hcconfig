@@ -15,7 +15,7 @@ interface TestConfig extends IConfig {
 }
 
 describe("React hooks: useConfigs", () => {
-    test.only("useConfigs returns initial config values and makes a render when any key is changed", () => {
+    test("useConfigs returns initial config values and makes a render when any key is changed", () => {
         const conf = new Configuration<TestConfig>({
             foo: "value",
             bar: 10,
