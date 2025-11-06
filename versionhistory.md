@@ -1,3 +1,7 @@
+# 0.3.2
+
+ - Removed a .only from a test suite
+
 # 0.3.1
 
  - Fixed a bug useConfigs hook that did not return values that are falsy (like false, 0 etc.) and added tests for it
