@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
@@ -13,10 +14,15 @@ export default defineConfig({
             external: ["react", "react-dom"], // add external dependencies here
         },
     },
-    plugins: [dts(
-        { 
-            tsconfigPath: "./tsconfig.json", 
+    plugins: [
+        dts({
+            tsconfigPath: "./tsconfig.json",
             // rollupTypes: true,
-            insertTypesEntry: true
-        })],
+            insertTypesEntry: true,
+        }),
+    ],
+    test: {
+        allowOnly: false,
+        hideSkippedTests: true,
+    },
 });

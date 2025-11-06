@@ -29,7 +29,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test:dev": "vitest watch src",
+    "test": "vitest watch src --allowOnly",
+    "test:dev": "vitest watch src --allowOnly",
     "test:ci": "vitest run src disttest",
     "test:build": "tsc -b && vite build && vitest run src disttest",
     "test:dist": "vitest watch disttest"
